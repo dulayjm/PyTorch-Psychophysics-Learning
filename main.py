@@ -27,17 +27,25 @@ criterion = nn.CrossEntropyLoss().to(device)
 
 
 # TODO: configure with your dataset, including re-write to new format
-# dataset = OmniglotReactionTimeDataset('small_dataset.csv', 
-#             transforms=transforms.ToTensor())
 
-train_set = torchvision.datasets.Omniglot('/Users/justindulay/research/psychophysics-loss', 
-                                download=True,
-                                transform=transforms.Compose([
+train_transform = transforms.Compose([
                                 transforms.RandomCrop(32, padding=4),
                                 transforms.Grayscale(num_output_channels=3),
                                 transforms.RandomHorizontalFlip(),
                                 transforms.ToTensor(),
-                                ]))
+                                ])
+
+train_set = OmniglotReactionTimeDataset('small_dataset.csv', 
+            transforms=train_transform)
+
+# train_set = torchvision.datasets.Omniglot('/Users/justindulay/research/psychophysics-loss', 
+#                                 download=True,
+#                                 transform=transforms.Compose([
+#                                 transforms.RandomCrop(32, padding=4),
+#                                 transforms.Grayscale(num_output_channels=3),
+#                                 transforms.RandomHorizontalFlip(),
+#                                 transforms.ToTensor(),
+#                                 ]))
 
 
 dataloader = torch.utils.data.DataLoader(
@@ -69,3 +77,5 @@ for epoch in range(num_epochs):
         losses.append(loss)
 
         print('finished batch')
+
+print(losses)

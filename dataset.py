@@ -2,6 +2,8 @@ from torch.utils.data import Dataset
 import pandas as pd
 from skimage import io
 
+from PIL import Image
+
 from torchvision.utils import save_image
 
 class OmniglotReactionTimeDataset(Dataset):
@@ -36,17 +38,17 @@ class OmniglotReactionTimeDataset(Dataset):
 
         print('im1name', im1name)
 
-        # image1 = Image.open(im1name)
+        image1 = Image.open(im1name)
         # image1 = torch.tensor(image1)
-        image1 = io.imread(im1name)
+        # image1 = io.imread(im1name)
         # image1 = torch.tensor(image1)
         # save_image(image1, 'sanity1.png')
-        io.imsave('sanity.png', image1)
+        # io.imsave('sanity.png', image1)
         # well we can't open an image, because they are an array of images...
         # you need a loop to open them up individually
         im2name = self.raw_data.iloc[idx, 3]
-        image2 = io.imread(im2name)
-        # image2 = Image.open(im2name)
+        # image2 = io.imread(im2name)
+        image2 = Image.open(im2name)
         rt = self.raw_data.iloc[idx, 4]
 
         if self.transform:
