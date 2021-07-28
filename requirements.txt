@@ -4,3 +4,5 @@ numpy
 matplotlib
 scikit-image
 pandas
+string_utils
+error_rates

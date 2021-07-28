@@ -58,5 +58,4 @@ class OmniglotReactionTimeDataset(Dataset):
         sample = {'label1': label1, 'label2': label2, 'image1': image1,
                                             'image2': image2, 'rt': rt}
 
-        # return sample, not this for now ...
-        return image1, label1
+        return sample

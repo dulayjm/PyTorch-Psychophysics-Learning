@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-import torchvision
 from torchvision.models import resnet50
 import torchvision.transforms as transforms
 from torchvision.transforms.transforms import Grayscale
 
 from dataset import OmniglotReactionTimeDataset
+from psychloss import PsychLoss
 
 # CONFIGS
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,15 +18,12 @@ optim = torch.optim.SGD(model.parameters(), 0.001,
                                 momentum=0.9,
                                 weight_decay=0.9)
 
-num_epochs = 3
+num_epochs = 20
 
 batch_size = 64
 
-# TODO: change to psyphy loss
 criterion = nn.CrossEntropyLoss().to(device)
-
-
-# TODO: configure with your dataset, including re-write to new format
+# criterion = PsychLoss().to(device)
 
 train_transform = transforms.Compose([
                                 transforms.RandomCrop(32, padding=4),
@@ -50,9 +47,31 @@ train_set = OmniglotReactionTimeDataset('small_dataset.csv',
 
 dataloader = torch.utils.data.DataLoader(
         train_set,
-        batch_size=batch_size, shuffle=True,
+        batch_size=batch_size, shuffle=False,
         num_workers=batch_size, pin_memory=True)
 
+def softmax(x):
+    exp_x = torch.exp(x)
+    sum_x = torch.sum(exp_x, dim=1, keepdim=True)
+
+    return exp_x/sum_x
+
+def log_softmax(x):
+    return torch.log(softmax(x))
+
+def CrossEntropyLoss(outputs, targets, psych):
+    for idx in range(len(psych)):   
+        psych[idx] = abs(30000 - psych[idx])
+
+    num_examples = targets.shape[0]
+    batch_size = outputs.shape[0]
+    outputs = log_softmax(outputs).to(device)
+    outputs = outputs[range(batch_size), targets]
+
+    for i in range(len(outputs)):
+        outputs[i] += psych[i]
+
+    return - torch.sum(outputs)/num_examples
 
 
 model.train()
@@ -62,13 +81,21 @@ for epoch in range(num_epochs):
     losses = []
     accuracies = []
 
-    for inputs, labels in dataloader:
+    for idx, sample in enumerate(dataloader):
+
+        inputs = sample['image1']
+        labels = sample['label1']
+        psych = sample['rt']
+
+        print('len of psych is ', len(psych))
 
         inputs = inputs.to(device)
         labels = labels.to(device)
 
         outputs = model(inputs)
-        loss = criterion(outputs, labels)
+        # loss = criterion(outputs, labels)
+        loss = CrossEntropyLoss(outputs, labels, psych).to(device)
+        print('the shape of the loss ', loss.shape)
 
         optim.zero_grad()
         loss.backward()
