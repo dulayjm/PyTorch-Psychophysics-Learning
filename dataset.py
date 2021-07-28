@@ -21,10 +21,10 @@ class OmniglotReactionTimeDataset(Dataset):
 
     def __init__(self, data_file, transforms=None):
         self.raw_data = pd.read_csv(data_file)
-        print('raw ', self.raw_data)
-        for i in range(5):
-            print('for testing purposes, the item is ', self.raw_data.iloc[0, i])
-            print('the type of the item is', type(self.raw_data.iloc[0, i]))
+#         print('raw ', self.raw_data)
+#        for i in range(5):
+#            print('for testing purposes, the item is ', self.raw_data.iloc[0, i])
+#            print('the type of the item is', type(self.raw_data.iloc[0, i]))
 
         self.transform = transforms
 
@@ -36,7 +36,7 @@ class OmniglotReactionTimeDataset(Dataset):
         label2 = int(self.raw_data.iloc[idx, 1])
         im1name = self.raw_data.iloc[idx, 2]
 
-        print('im1name', im1name)
+#        print('im1name', im1name)
 
         image1 = Image.open(im1name)
         # image1 = torch.tensor(image1)

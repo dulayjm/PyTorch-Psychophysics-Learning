@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 from torchvision.transforms.transforms import Grayscale
 
 from dataset import OmniglotReactionTimeDataset
-from psychloss import PsychLoss
+# from psychloss import PsychLoss
 
 # CONFIGS
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -48,7 +48,7 @@ train_set = OmniglotReactionTimeDataset('small_dataset.csv',
 dataloader = torch.utils.data.DataLoader(
         train_set,
         batch_size=batch_size, shuffle=False,
-        num_workers=batch_size, pin_memory=True)
+        num_workers=0, pin_memory=True)
 
 def softmax(x):
     exp_x = torch.exp(x)
