@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = resnet50(pretrained=True).to(device)
 # model.fc = nn.Flatten()
-model.fc = nn.Linear(2048, 100)
+model.fc = nn.Linear(2048, 100).to(device)
 
 optim = torch.optim.SGD(model.parameters(), 0.001,
                                 momentum=0.9,
@@ -22,7 +22,7 @@ num_epochs = 20
 
 batch_size = 64
 
-criterion = nn.CrossEntropyLoss().to(device)
+# criterion = nn.CrossEntropyLoss().to(device)
 
 train_transform = transforms.Compose([
                                 transforms.RandomCrop(32, padding=4),
@@ -31,7 +31,7 @@ train_transform = transforms.Compose([
                                 transforms.ToTensor(),
                                 ])
 
-train_set = OmniglotReactionTimeDataset('small_dataset.csv', 
+train_set = OmniglotReactionTimeDataset('out.csv', 
             transforms=train_transform)
 
 dataloader = torch.utils.data.DataLoader(
@@ -67,17 +67,18 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
         outputs[i] += (psych[i] / 1000)
 
 
-    outputs = log_softmax(outputs).to(device)
+    outputs = log_softmax(outputs)
     # print('after log softmax')
     # print(outputs)
     # print('len of outputs', len(outputs))
     # print('shape of outputs', outputs.shape)
 
     outputs = outputs[range(batch_size), targets]
-    print('after reshape')
-    print(outputs)
+    print('sanity types', type(outputs), type(targets), type(labels))
+    # print('after reshape')
+    # print(outputs)
 
-    print('shape of outputs', outputs.shape)
+    # print('shape of outputs', outputs.shape)
 
 
 
@@ -120,6 +121,8 @@ for epoch in range(num_epochs):
                 j += 1
             else: 
                 psych_tensor[i] = psych_tensor[i-1]
+
+        psych_tensor = psych_tensor.to(device)
 
         # print('psychtensor', psych_tensor)
 
