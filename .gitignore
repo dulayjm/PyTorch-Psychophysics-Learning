@@ -1,7 +1,11 @@
 /env
 /.idea
 /.vscode
+/.neptune
+/__pycache__
 
 /omniglot_realfake
 
 psychloss.py
+
+out.csv
