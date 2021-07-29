@@ -13,6 +13,7 @@ neptune.create_experiment(name='sandbox-00', params={'lr': 0.001}, tags=['resnet
 
 # CONFIGS
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print('device is', device)
 
 model = resnet50(pretrained=True).to(device)
 # model.fc = nn.Flatten()
@@ -130,7 +131,8 @@ for epoch in range(num_epochs):
 
         # print('psychtensor', psych_tensor)
 
-        outputs = model(inputs)
+        # print('sanity types before model', type(inputs), type(psych_tensor))
+        outputs = model(inputs).to(device)
 
         # print('inputs shape', inputs.shape)
         # print('labels shape', labels.shape)

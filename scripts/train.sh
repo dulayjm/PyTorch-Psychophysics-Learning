@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #$ -N train_psyphy
-#$ -q gpu-debug
+#$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe
-#$ -l gpu=1
+#$ -l gpu=4
 
 BASE_PATH="$HOME/psychophysics-loss"
 module load python
