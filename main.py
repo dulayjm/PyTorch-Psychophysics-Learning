@@ -1,3 +1,4 @@
+import neptune
 import torch
 import torch.nn as nn
 import torchvision
@@ -7,6 +8,9 @@ from torchvision.transforms.transforms import Grayscale
 
 from dataset import OmniglotReactionTimeDataset
 
+neptune.init('dulayjm/psyphy-loss')
+neptune.create_experiment(name='sandbox-00', params={'lr': 0.001}, tags=['resnet50', 'psyphy'])
+
 # CONFIGS
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -15,7 +19,7 @@ model = resnet50(pretrained=True).to(device)
 model.fc = nn.Linear(2048, 100).to(device)
 
 optim = torch.optim.SGD(model.parameters(), 0.001,
-                                momentum=0.9,
+                                 momentum=0.9,
                                 weight_decay=0.9)
 
 num_epochs = 20
@@ -80,7 +84,7 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
 
     # print('shape of outputs', outputs.shape)
 
-
+    # print('shape of outputs', outputs.shape)
 
     # print('after psych added')
     # print('len of outputs', len(outputs))
@@ -149,6 +153,9 @@ for epoch in range(num_epochs):
     accuracy = 100 * correct / len(train_set)
     print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
     print(f'running loss: {train_loss:.4f}')
+
+    neptune.log_metric('train_loss', train_loss)
+    neptune.log_metric('accuracy', accuracy)
 
     accuracies.append(accuracy)
     losses.append(train_loss)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #$ -N train_psyphy
-#$ -q gpu
+#$ -q gpu-debug
 #S -M jdulay@nd.edu
 #S -m abe
 #$ -l gpu=1
