@@ -56,6 +56,16 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     # print('len of outputs', len(outputs))
     # print('shape of outputs', outputs.shape)
 
+    # converting reaction time to penalty
+    for idx in range(len(psych)):   
+        psych[idx] = abs(5000 - psych[idx])
+
+    # adding penalty to each of the output logits 
+    # but it's too severe and outweighs the rest of the loss
+    # scaling seems to somewhat work
+    for i in range(len(outputs)):
+        outputs[i] += (psych[i] / 1000)
+
 
     outputs = log_softmax(outputs).to(device)
     # print('after log softmax')
@@ -64,17 +74,11 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     # print('shape of outputs', outputs.shape)
 
     outputs = outputs[range(batch_size), targets]
-    # print('after reshape')
-    # print(outputs)
+    print('after reshape')
+    print(outputs)
 
-    # print('shape of outputs', outputs.shape)
+    print('shape of outputs', outputs.shape)
 
-    # converting reaction time to penalty
-    for idx in range(len(psych)):   
-        psych[idx] = abs(5000 - psych[idx])
-
-    for i in range(len(outputs)):
-        outputs[i] += (psych[i] / 1000)
 
 
     # print('after psych added')
