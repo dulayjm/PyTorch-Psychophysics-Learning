@@ -1,17 +1,34 @@
+import argparse
 import neptune
+import time
 import torch
 import torch.nn as nn
-import torchvision
 from torchvision.models import resnet50
 import torchvision.transforms as transforms
-from torchvision.transforms.transforms import Grayscale
 
 from dataset import OmniglotReactionTimeDataset
+from psychloss import PsychCrossEntropyLoss
 
-neptune.init('dulayjm/psyphy-loss')
-neptune.create_experiment(name='sandbox-00', params={'lr': 0.001}, tags=['resnet50', 'psyphy'])
+# args
+parser = argparse.ArgumentParser(description='Training Psych Loss.')
+parser.add_argument('--num_epochs', type=int, default=20,
+                    help='number of epochs to use')
+parser.add_argument('--batch_size', type=int, default=64,
+                    help='batch size')
+parser.add_argument('--num_classes', type=int, default=100,
+                    help='number of classes')
+parser.add_argument('--learning_rate', type=int, default=0.001,
+                    help='learning rate')
+parser.add_argument('--use_neptune', type=bool, default=False,
+                    help='log metrics via neptune')
 
-# CONFIGS
+args = parser.parse_args()
+
+if args.use_neptune:
+    neptune.init('dulayjm/psyphy-loss')
+    neptune.create_experiment(name='sandbox-00', params={'lr': args.learning_rate}, tags=['resnet50', 'psyphy'])
+
+# configs
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('device is', device)
 
@@ -23,20 +40,17 @@ optim = torch.optim.SGD(model.parameters(), 0.001,
                                  momentum=0.9,
                                 weight_decay=0.9)
 
-num_epochs = 20
+num_epochs = args.num_epochs
 
-batch_size = 64
-
-# criterion = nn.CrossEntropyLoss().to(device)
+batch_size = args.batch_size
 
 train_transform = transforms.Compose([
-                                transforms.RandomCrop(32, padding=4),
-                                transforms.Grayscale(num_output_channels=3),
-                                transforms.RandomHorizontalFlip(),
-                                transforms.ToTensor(),
-                                ])
-
-train_set = OmniglotReactionTimeDataset('out.csv', 
+                transforms.RandomCrop(32, padding=4),
+                transforms.Grayscale(num_output_channels=3),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                ])
+train_set = OmniglotReactionTimeDataset('small_dataset.csv', 
             transforms=train_transform)
 
 dataloader = torch.utils.data.DataLoader(
@@ -44,68 +58,19 @@ dataloader = torch.utils.data.DataLoader(
         batch_size=batch_size, shuffle=False,
         num_workers=0, pin_memory=True)
 
-def softmax(x):
-    exp_x = torch.exp(x)
-    sum_x = torch.sum(exp_x, dim=1, keepdim=True)
-
-    return exp_x/sum_x
-
-def log_softmax(x):
-    return torch.log(softmax(x))
-
-def PsychCrossEntropyLoss(outputs, targets, psych):
-    num_examples = targets.shape[0]
-    batch_size = outputs.shape[0]
-    # print('before everything')
-    # print(outputs)
-    # print('len of outputs', len(outputs))
-    # print('shape of outputs', outputs.shape)
-
-    # converting reaction time to penalty
-    for idx in range(len(psych)):   
-        psych[idx] = abs(5000 - psych[idx])
-
-    # adding penalty to each of the output logits 
-    # but it's too severe and outweighs the rest of the loss
-    # scaling seems to somewhat work
-    for i in range(len(outputs)):
-        outputs[i] += (psych[i] / 1000)
-
-
-    outputs = log_softmax(outputs)
-    # print('after log softmax')
-    # print(outputs)
-    # print('len of outputs', len(outputs))
-    # print('shape of outputs', outputs.shape)
-
-    outputs = outputs[range(batch_size), targets]
-    print('sanity types', type(outputs), type(targets), type(labels))
-    # print('after reshape')
-    # print(outputs)
-
-    # print('shape of outputs', outputs.shape)
-
-    # print('shape of outputs', outputs.shape)
-
-    # print('after psych added')
-    # print('len of outputs', len(outputs))
-
-    # print('len of psych', len(psych))
-
-    return - torch.sum(outputs)/num_examples
-
-
 model.train()
 
 accuracies = []
 losses = []
 
+exp_time = time.time()
+
 for epoch in range(num_epochs):
     running_loss = 0.0
     correct = 0.0
 
-    for idx, sample in enumerate(dataloader):
 
+    for idx, sample in enumerate(dataloader):
         image1 = sample['image1']
         image2 = sample['image2']
 
@@ -126,19 +91,9 @@ for epoch in range(num_epochs):
                 j += 1
             else: 
                 psych_tensor[i] = psych_tensor[i-1]
-
         psych_tensor = psych_tensor.to(device)
 
-        # print('psychtensor', psych_tensor)
-
-        # print('sanity types before model', type(inputs), type(psych_tensor))
         outputs = model(inputs).to(device)
-
-        # print('inputs shape', inputs.shape)
-        # print('labels shape', labels.shape)
-        # print('outputs shape', outputs.shape)
-
-        # loss = criterion(outputs, labels).to(device)
         loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
         optim.zero_grad()
@@ -146,9 +101,7 @@ for epoch in range(num_epochs):
         optim.step()
 
         running_loss += loss.item()
-        
         labels_hat = torch.argmax(outputs, dim=1)
-        # train_acc = torch.sum(labels.data == labels_hat).item() / (len(labels) * 1.0)
         correct += torch.sum(labels.data == labels_hat).item()
 
     train_loss = running_loss / len(dataloader)
@@ -156,14 +109,13 @@ for epoch in range(num_epochs):
     print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
     print(f'running loss: {train_loss:.4f}')
 
-    neptune.log_metric('train_loss', train_loss)
-    neptune.log_metric('accuracy', accuracy)
+    if args.use_neptune: 
+        neptune.log_metric('train_loss', train_loss)
+        neptune.log_metric('accuracy', accuracy)
 
     accuracies.append(accuracy)
     losses.append(train_loss)
 
-print('finished training')
+print(f'{time.time() - exp_time:.2f} seconds')
 
 # plt, do metrics with
-# print(losses)
-# print(accuracies)
