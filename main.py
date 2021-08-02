@@ -32,9 +32,12 @@ if args.use_neptune:
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('device is', device)
 
-model = resnet50(pretrained=True).to(device)
+model = resnet50(pretrained=True)
 # model.fc = nn.Flatten()
-model.fc = nn.Linear(2048, 100).to(device)
+model.fc = nn.Linear(2048, 100)
+
+model = nn.DataParallel(model).to(device)
+# model.fc = nn.DataParallel(model.fc).to(device)
 
 optim = torch.optim.SGD(model.parameters(), 0.001,
                                  momentum=0.9,
@@ -50,7 +53,7 @@ train_transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 ])
-train_set = OmniglotReactionTimeDataset('small_dataset.csv', 
+train_set = OmniglotReactionTimeDataset('out.csv', 
             transforms=train_transform)
 
 dataloader = torch.utils.data.DataLoader(
