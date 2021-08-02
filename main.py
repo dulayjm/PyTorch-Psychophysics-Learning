@@ -19,6 +19,8 @@ parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
 parser.add_argument('--learning_rate', type=int, default=0.001,
                     help='learning rate')
+parser.add_argument('--dataset_file', type=str, default='out.csv',
+                    help='dataset file to use. out.csv is the full set')
 parser.add_argument('--use_neptune', type=bool, default=False,
                     help='log metrics via neptune')
 
@@ -53,7 +55,7 @@ train_transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 ])
-train_set = OmniglotReactionTimeDataset('out.csv', 
+train_set = OmniglotReactionTimeDataset(args.dataset_file, 
             transforms=train_transform)
 
 dataloader = torch.utils.data.DataLoader(

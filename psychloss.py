@@ -7,13 +7,13 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     # converting reaction time to penalty
     # 30000 is close to the max penalty time seen in the data
     for idx in range(len(psych)):   
-        psych[idx] = abs(30000 - psych[idx])
+        psych[idx] = abs(10002 - psych[idx])
 
     # adding penalty to each of the output logits 
     # but it's too severe and outweighs the rest of the loss
     # scaling seems to somewhat work
     for i in range(len(outputs)):
-        outputs[i] += (psych[i] / 1000)
+        outputs[i] += (psych[i] / 300)
 
     outputs = _log_softmax(outputs)
     outputs = outputs[range(batch_size), targets]
