@@ -1,10 +1,11 @@
 import argparse
-import neptune
 import time
+
+import neptune
 import torch
 import torch.nn as nn
-from torchvision.models import resnet50
 import torchvision.transforms as transforms
+from torchvision.models import resnet50
 
 from dataset import OmniglotReactionTimeDataset
 from psychloss import PsychCrossEntropyLoss
@@ -19,7 +20,9 @@ parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
 parser.add_argument('--learning_rate', type=int, default=0.001,
                     help='learning rate')
-parser.add_argument('--dataset_file', type=str, default='out.csv',
+parser.add_argument('--loss_fn', type=str, default='psych-rt',
+                    help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
+parser.add_argument('--dataset_file', type=str, default='processed.csv',
                     help='dataset file to use. out.csv is the full set')
 parser.add_argument('--use_neptune', type=bool, default=False,
                     help='log metrics via neptune')
@@ -28,7 +31,7 @@ args = parser.parse_args()
 
 if args.use_neptune:
     neptune.init('dulayjm/psyphy-loss')
-    neptune.create_experiment(name='sandbox-00', params={'lr': args.learning_rate}, tags=['resnet50', 'psyphy'])
+    neptune.create_experiment(name='sandbox-00', params={'lr': args.learning_rate}, tags=['resnet50', 'psych'])
 
 # configs
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -37,13 +40,14 @@ print('device is', device)
 model = resnet50(pretrained=True)
 # model.fc = nn.Flatten()
 model.fc = nn.Linear(2048, 100)
-
 model = nn.DataParallel(model).to(device)
-# model.fc = nn.DataParallel(model.fc).to(device)
 
 optim = torch.optim.SGD(model.parameters(), 0.001,
                                  momentum=0.9,
                                 weight_decay=0.9)
+
+if args.loss_fn == 'cross-entropy':
+    loss_fn = nn.CrossEntropyLoss()
 
 num_epochs = args.num_epochs
 
@@ -74,7 +78,6 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     correct = 0.0
 
-
     for idx, sample in enumerate(dataloader):
         image1 = sample['image1']
         image2 = sample['image2']
@@ -99,7 +102,11 @@ for epoch in range(num_epochs):
         psych_tensor = psych_tensor.to(device)
 
         outputs = model(inputs).to(device)
-        loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
+
+        if args.loss_fn == 'cross-entropy':
+            loss = loss_fn(outputs, labels)
+        else: 
+            loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
         optim.zero_grad()
         loss.backward()
