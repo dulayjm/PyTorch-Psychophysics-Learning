@@ -1,11 +1,15 @@
+# environments
 /env
 /.idea
 /.vscode
 /.neptune
 */__pycache__/*
 
+# images
 /omniglot_realfake
 
+# dataset files
 *.csv
 
+# CRC logs
 train_*

@@ -32,7 +32,7 @@ args = parser.parse_args()
 
 if args.use_neptune:
     neptune.init('dulayjm/psyphy-loss')
-    neptune.create_experiment(name='sandbox-00', params={'lr': args.learning_rate}, tags=['resnet50', 'psych'])
+    neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn])
 
 # configs
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -102,14 +102,15 @@ for epoch in range(num_epochs):
                 psych_tensor[i] = psych_tensor[i-1]
         psych_tensor = psych_tensor.to(device)
 
+
         outputs = model(inputs).to(device)
 
         if args.loss_fn == 'cross-entropy':
             loss = loss_fn(outputs, labels)
-        elif args.loss_fn == 'acc-psych': 
-            loss = AccPsychCrossEntropyLoss(outputs, labels, psych).to(device)
+        elif args.loss_fn == 'psych-acc': 
+            loss = AccPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
         else:
-            loss = PsychCrossEntropyLoss(outputs, labels, psych).to(device)
+            loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
         optim.zero_grad()
         loss.backward()

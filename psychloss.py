@@ -14,7 +14,7 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     # but it's too severe and outweighs the rest of the loss
     # scaling seems to somewhat work
     for i in range(len(outputs)):
-        val = psych[i] / 300
+        val = psych[i] / 500
         if np.isnan(val.cpu()):
             val = 0 
             
