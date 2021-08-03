@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 def PsychCrossEntropyLoss(outputs, targets, psych):
     num_examples = targets.shape[0]
@@ -13,7 +14,11 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     # but it's too severe and outweighs the rest of the loss
     # scaling seems to somewhat work
     for i in range(len(outputs)):
-        outputs[i] += (psych[i] / 300)
+        val = psych[i] / 300
+        if np.isnan(val.cpu()):
+            val = 0 
+            
+        outputs[i] += val 
 
     outputs = _log_softmax(outputs)
     outputs = outputs[range(batch_size), targets]

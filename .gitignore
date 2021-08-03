@@ -2,7 +2,7 @@
 /.idea
 /.vscode
 /.neptune
-/__pycache__
+*/__pycache__/*
 
 /omniglot_realfake
 
