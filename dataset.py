@@ -50,12 +50,13 @@ class OmniglotReactionTimeDataset(Dataset):
         # image2 = io.imread(im2name)
         image2 = Image.open(im2name)
         rt = self.raw_data.iloc[idx, 4]
+        acc = self.raw_data.iloc[idx, 5]
 
         if self.transform:
             image1 = self.transform(image1)
             image2 = self.transform(image2)
 
         sample = {'label1': label1, 'label2': label2, 'image1': image1,
-                                            'image2': image2, 'rt': rt}
+                                            'image2': image2, 'rt': rt, 'acc': acc}
 
         return sample

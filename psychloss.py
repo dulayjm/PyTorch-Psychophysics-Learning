@@ -21,6 +21,23 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     return - torch.sum(outputs)/num_examples
 
 
+def AccPsychCrossEntropyLoss(outputs, targets, psych):
+    num_examples = targets.shape[0]
+    batch_size = outputs.shape[0]
+
+    # converting accuracy to penalty
+    for idx in range(len(psych)):   
+        psych[idx] = abs(1 - psych[idx])
+
+    # for now, no need to scale ...
+    for i in range(len(outputs)):
+        outputs[i] += (psych[i])
+
+    outputs = _log_softmax(outputs)
+    outputs = outputs[range(batch_size), targets]
+
+    return - torch.sum(outputs)/num_examples
+
 def _softmax(x):
     exp_x = torch.exp(x)
     sum_x = torch.sum(exp_x, dim=1, keepdim=True)

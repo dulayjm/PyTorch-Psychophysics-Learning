@@ -9,6 +9,7 @@ from torchvision.models import resnet50
 
 from dataset import OmniglotReactionTimeDataset
 from psychloss import PsychCrossEntropyLoss
+from psychloss import AccPsychCrossEntropyLoss
 
 # args
 parser = argparse.ArgumentParser(description='Training Psych Loss.')
@@ -22,7 +23,7 @@ parser.add_argument('--learning_rate', type=int, default=0.001,
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
-parser.add_argument('--dataset_file', type=str, default='processed.csv',
+parser.add_argument('--dataset_file', type=str, default='processed_out_acc.csv',
                     help='dataset file to use. out.csv is the full set')
 parser.add_argument('--use_neptune', type=bool, default=False,
                     help='log metrics via neptune')
@@ -82,7 +83,10 @@ for epoch in range(num_epochs):
         label1 = sample['label1']
         label2 = sample['label2']
 
-        psych = sample['rt']
+        if args.loss_fn == 'psych-acc':
+            psych = sample['acc']
+        else: 
+            psych = sample['rt']
 
         # concatenate the batched images for now
         inputs = torch.cat([image1, image2], dim=0).to(device)
@@ -102,8 +106,10 @@ for epoch in range(num_epochs):
 
         if args.loss_fn == 'cross-entropy':
             loss = loss_fn(outputs, labels)
-        else: 
-            loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
+        elif args.loss_fn == 'acc-psych': 
+            loss = AccPsychCrossEntropyLoss(outputs, labels, psych).to(device)
+        else:
+            loss = PsychCrossEntropyLoss(outputs, labels, psych).to(device)
 
         optim.zero_grad()
         loss.backward()
