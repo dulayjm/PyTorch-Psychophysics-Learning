@@ -73,6 +73,7 @@ exp_time = time.time()
 for epoch in range(num_epochs):
     running_loss = 0.0
     correct = 0.0
+    total = 0.0
 
     for idx, sample in enumerate(dataloader):
         image1 = sample['image1']
@@ -109,11 +110,18 @@ for epoch in range(num_epochs):
         optim.step()
 
         running_loss += loss.item()
-        labels_hat = torch.argmax(outputs, dim=1)
-        correct += torch.sum(labels.data == labels_hat).item()
+
+        # labels_hat = torch.argmax(outputs, dim=1)  
+        # correct += torch.sum(labels.data == labels_hat)
+
+        # this seemed to fix the accuracy calculation
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
 
     train_loss = running_loss / len(dataloader)
-    accuracy = 100 * correct / len(train_set)
+    accuracy = 100 * correct / total
+
     print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
     print(f'running loss: {train_loss:.4f}')
 
