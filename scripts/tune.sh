@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N optuna-tune
+#$ -N optuna_tune
 #$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe
@@ -8,6 +8,7 @@
 
 BASE_PATH="$HOME/psychophysics-loss"
 module load python
+pip3 install -r requirements.txt
 
 python "$BASE_PATH/tune.py" --dataset_file="processed_out_acc.csv" \
   --loss_fn="psych-rt" \

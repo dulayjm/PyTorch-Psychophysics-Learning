@@ -39,7 +39,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('device is', device)
 
 model = resnet50(pretrained=True).to(device)
-model.fc = nn.Linear(2048, 100).to(device)
+model.fc = nn.Linear(2048, args.num_classes).to(device)
 
 optim = torch.optim.Adam(model.parameters(), 0.001)
 
@@ -61,7 +61,7 @@ train_set = OmniglotReactionTimeDataset(args.dataset_file,
 
 dataloader = torch.utils.data.DataLoader(
         train_set,
-        batch_size=batch_size, shuffle=False,
+        batch_size=batch_size, shuffle=True,
         num_workers=0, pin_memory=True)
 
 model.train()

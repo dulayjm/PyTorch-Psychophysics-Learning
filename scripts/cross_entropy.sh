@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train_cross_entropy
+#$ -N train_cross_entropy_20epoch
 #$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe
@@ -9,6 +9,6 @@
 BASE_PATH="$HOME/psychophysics-loss"
 module load python
 
-python "$BASE_PATH/main.py" --dataset_file="processed_out.csv" \
+python "$BASE_PATH/main.py" --dataset_file="processed_out_acc.csv" \
   --loss_fn="cross-entropy" \
   --use_neptune=True

@@ -153,7 +153,7 @@ def objective(trial):
             raise optuna.exceptions.TrialPruned()
 
     print(f'{time.time() - exp_time:.2f} seconds')
-
+    return train_loss
     # plt, do metrics with
 
 

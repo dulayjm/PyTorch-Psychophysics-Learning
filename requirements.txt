@@ -6,3 +6,4 @@ scikit-image
 pandas
 string_utils
 neptune-client
+optuna

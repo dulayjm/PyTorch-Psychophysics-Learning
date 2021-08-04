@@ -13,3 +13,7 @@
 
 # CRC logs
 train_*
+debug_train*
+optuna-tune*
+optuna_tune*
+train-*

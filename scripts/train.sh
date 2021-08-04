@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train_psych
+#$ -N train-rt-20epoch
 #$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe
@@ -9,5 +9,4 @@
 BASE_PATH="$HOME/psychophysics-loss"
 module load python
 
-python "$BASE_PATH/main.py" --dataset_file="processed_out.csv" \
-  --use_neptune=True
+python "$BASE_PATH/main.py" --num_epochs=20 --dataset_file="processed_out_acc.csv" --use_neptune=True
