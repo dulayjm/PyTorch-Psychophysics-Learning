@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N optuna_tune
+#$ -N optuna_tune_crossentropy
 #$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe
@@ -11,5 +11,5 @@ module load python
 pip3 install -r requirements.txt
 
 python "$BASE_PATH/tune.py" --dataset_file="processed_out_acc.csv" \
-  --loss_fn="psych-rt" \
+  --loss_fn="cross-entropy" \
   --use_neptune=True

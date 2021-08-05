@@ -65,7 +65,7 @@ def objective(trial):
 
     dataloader = torch.utils.data.DataLoader(
             train_set,
-            batch_size=batch_size, shuffle=False,
+            batch_size=batch_size, shuffle=True,
             num_workers=0, pin_memory=True)
 
     optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"])
@@ -153,13 +153,13 @@ def objective(trial):
             raise optuna.exceptions.TrialPruned()
 
     print(f'{time.time() - exp_time:.2f} seconds')
-    return train_loss
+    return accuracy
     # plt, do metrics with
 
 
 if __name__ == '__main__':
     
-    study = optuna.create_study(direction="minimize") # minimize loss_fn
+    study = optuna.create_study(direction="maximize") # minimize loss_fn
     study.optimize(objective, n_trials=100, timeout=600)
 
     # we aren't finetuning the model, 

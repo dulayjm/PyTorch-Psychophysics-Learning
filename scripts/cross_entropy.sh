@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train_cross_entropy_20epoch
+#$ -N train_cross_entropy_20epoch_sanity
 #$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe
