@@ -21,7 +21,7 @@ parser.add_argument('--batch_size', type=int, default=64,
                     help='batch size')
 parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
-parser.add_argument('--learning_rate', type=float, default=0.0001,
+parser.add_argument('--learning_rate', type=float, default=0.0001, 
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
@@ -164,5 +164,18 @@ for epoch in range(num_epochs):
     losses.append(train_loss)
 
 print(f'{time.time() - exp_time:.2f} seconds')
+
+# save model
+# /afs/crc.nd.edu/user/j/jdulay/psychophysics-loss
+path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod.pth'
+if args.loss_fn == 'psych-rt':
+    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod.pth'
+elif args.loss_fn == 'psych-acc':
+    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/acc-mod.pth'
+else:
+    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod.pth'
+
+    
+torch.save(model.state_dict(), path)
 
 # plt, do metrics with
