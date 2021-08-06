@@ -2,8 +2,10 @@ import argparse
 import time
 
 import neptune
+import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data.sampler import SubsetRandomSampler
 import torchvision.transforms as transforms
 from torchvision.models import resnet50
 
@@ -56,13 +58,35 @@ train_transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 ])
-train_set = OmniglotReactionTimeDataset(args.dataset_file, 
+dataset = OmniglotReactionTimeDataset(args.dataset_file, 
             transforms=train_transform)
 
-dataloader = torch.utils.data.DataLoader(
-        train_set,
-        batch_size=batch_size, shuffle=True,
-        num_workers=0, pin_memory=True)
+validation_split = .2
+shuffle_dataset = True
+random_seed = 42
+
+dataset_size = len(dataset)
+indices = list(range(dataset_size))
+split = int(np.floor(validation_split * dataset_size))
+
+if shuffle_dataset :
+    np.random.seed(random_seed)
+    np.random.shuffle(indices)
+train_indices, val_indices = indices[split:], indices[:split]
+
+# Creating PT data samplers and loaders:
+train_sampler = SubsetRandomSampler(train_indices)
+valid_sampler = SubsetRandomSampler(val_indices)
+
+train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
+                                           sampler=train_sampler)
+validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+                                                sampler=valid_sampler)
+
+# dataloader = torch.utils.data.DataLoader(
+#         train_set,
+#         batch_size=batch_size, shuffle=True,
+#         num_workers=0, pin_memory=True)
 
 model.train()
 
@@ -76,7 +100,7 @@ for epoch in range(num_epochs):
     correct = 0.0
     total = 0.0
 
-    for idx, sample in enumerate(dataloader):
+    for idx, sample in enumerate(train_loader):
         image1 = sample['image1']
         image2 = sample['image2']
 
@@ -126,7 +150,7 @@ for epoch in range(num_epochs):
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
 
-    train_loss = running_loss / len(dataloader)
+    train_loss = running_loss / len(train_loader)
     accuracy = 100 * correct / total
 
     print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
