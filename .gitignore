@@ -17,5 +17,6 @@ debug_train*
 optuna-tune*
 optuna_tune*
 train-*
+eval_ps*
 
 *.pth

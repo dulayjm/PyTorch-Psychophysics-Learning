@@ -21,7 +21,7 @@ parser.add_argument('--batch_size', type=int, default=64,
                     help='batch size')
 parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
-parser.add_argument('--learning_rate', type=float, default=0.0001, 
+parser.add_argument('--learning_rate', type=float, default=0.01, 
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 

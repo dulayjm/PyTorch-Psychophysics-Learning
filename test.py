@@ -43,7 +43,8 @@ print('device is', device)
 model = resnet50(pretrained=True).to(device)
 model.fc = nn.Linear(2048, args.num_classes).to(device)
 
-path = 'path'
+path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod.pth'
+
 model.load_state_dict(torch.load(path))
 
 
