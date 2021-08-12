@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N train-rt-20epoch-comparative
+#$ -N train-rt-20epoch-seed
 #$ -q gpu
 #S -M jdulay@nd.edu
 #S -m abe

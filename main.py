@@ -3,6 +3,7 @@ import time
 
 import neptune
 import numpy as np
+from numpy.random.mtrand import seed
 import torch
 import torch.nn as nn
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -32,150 +33,158 @@ parser.add_argument('--use_neptune', type=bool, default=False,
 
 args = parser.parse_args()
 
-if args.use_neptune:
-    neptune.init('dulayjm/psyphy-loss')
-    neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn])
+# let's do this 5 times, changing the random seed each time
+for seed_idx in range(1, 6):
+    random_seed = seed_idx ** 3
 
-# configs
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print('device is', device)
+    torch.manual_seed(random_seed)
 
-model = resnet50(pretrained=True).to(device)
-model.fc = nn.Linear(2048, args.num_classes).to(device)
+    if args.use_neptune:
+        neptune.init('dulayjm/psyphy-loss')
+        neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn, random_seed])
 
-optim = torch.optim.Adam(model.parameters(), 0.001)
+    # configs
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('device is', device)
 
-if args.loss_fn == 'cross-entropy':
-    loss_fn = nn.CrossEntropyLoss()
+    model = resnet50(pretrained=True).to(device)
+    model.fc = nn.Linear(2048, args.num_classes).to(device)
 
-num_epochs = args.num_epochs
+    optim = torch.optim.Adam(model.parameters(), 0.001)
 
-batch_size = args.batch_size
+    if args.loss_fn == 'cross-entropy':
+        loss_fn = nn.CrossEntropyLoss()
 
-train_transform = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.Grayscale(num_output_channels=3),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                ])
-dataset = OmniglotReactionTimeDataset(args.dataset_file, 
-            transforms=train_transform)
+    num_epochs = args.num_epochs
 
-validation_split = .2
-shuffle_dataset = True
-random_seed = 42
+    batch_size = args.batch_size
 
-dataset_size = len(dataset)
-indices = list(range(dataset_size))
-split = int(np.floor(validation_split * dataset_size))
+    train_transform = transforms.Compose([
+                    transforms.RandomCrop(32, padding=4),
+                    transforms.Grayscale(num_output_channels=3),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    ])
+    dataset = OmniglotReactionTimeDataset(args.dataset_file, 
+                transforms=train_transform)
 
-if shuffle_dataset :
-    np.random.seed(random_seed)
-    np.random.shuffle(indices)
-train_indices, val_indices = indices[split:], indices[:split]
+    validation_split = .2
+    shuffle_dataset = True
 
-# Creating PT data samplers and loaders:
-train_sampler = SubsetRandomSampler(train_indices)
-valid_sampler = SubsetRandomSampler(val_indices)
 
-train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
-                                           sampler=train_sampler)
-validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                                sampler=valid_sampler)
 
-# dataloader = torch.utils.data.DataLoader(
-#         train_set,
-#         batch_size=batch_size, shuffle=True,
-#         num_workers=0, pin_memory=True)
 
-model.train()
+    dataset_size = len(dataset)
+    indices = list(range(dataset_size))
+    split = int(np.floor(validation_split * dataset_size))
 
-accuracies = []
-losses = []
+    if shuffle_dataset :
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+    train_indices, val_indices = indices[split:], indices[:split]
 
-exp_time = time.time()
+    # Creating PT data samplers and loaders:
+    train_sampler = SubsetRandomSampler(train_indices)
+    valid_sampler = SubsetRandomSampler(val_indices)
 
-for epoch in range(num_epochs):
-    running_loss = 0.0
-    correct = 0.0
-    total = 0.0
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
+                                            sampler=train_sampler)
+    validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+                                                    sampler=valid_sampler)
 
-    for idx, sample in enumerate(train_loader):
-        image1 = sample['image1']
-        image2 = sample['image2']
+    # dataloader = torch.utils.data.DataLoader(
+    #         train_set,
+    #         batch_size=batch_size, shuffle=True,
+    #         num_workers=0, pin_memory=True)
 
-        label1 = sample['label1']
-        label2 = sample['label2']
+    model.train()
 
-        if args.loss_fn == 'psych-acc':
-            psych = sample['acc']
-        else: 
-            psych = sample['rt']
+    accuracies = []
+    losses = []
 
-        # concatenate the batched images for now
-        inputs = torch.cat([image1, image2], dim=0).to(device)
-        labels = torch.cat([label1, label2], dim=0).to(device)
+    exp_time = time.time()
 
-        psych_tensor = torch.zeros(len(labels))
-        j = 0 
-        for i in range(len(psych_tensor)):
-            if i % 2 == 0: 
-                psych_tensor[i] = psych[j]
-                j += 1
+    for epoch in range(num_epochs):
+        running_loss = 0.0
+        correct = 0.0
+        total = 0.0
+
+        for idx, sample in enumerate(train_loader):
+            image1 = sample['image1']
+            image2 = sample['image2']
+
+            label1 = sample['label1']
+            label2 = sample['label2']
+
+            if args.loss_fn == 'psych-acc':
+                psych = sample['acc']
             else: 
-                psych_tensor[i] = psych_tensor[i-1]
-        psych_tensor = psych_tensor.to(device)
+                psych = sample['rt']
+
+            # concatenate the batched images for now
+            inputs = torch.cat([image1, image2], dim=0).to(device)
+            labels = torch.cat([label1, label2], dim=0).to(device)
+
+            psych_tensor = torch.zeros(len(labels))
+            j = 0 
+            for i in range(len(psych_tensor)):
+                if i % 2 == 0: 
+                    psych_tensor[i] = psych[j]
+                    j += 1
+                else: 
+                    psych_tensor[i] = psych_tensor[i-1]
+            psych_tensor = psych_tensor.to(device)
 
 
-        outputs = model(inputs).to(device)
+            outputs = model(inputs).to(device)
 
-        if args.loss_fn == 'cross-entropy':
-            loss = loss_fn(outputs, labels)
-        elif args.loss_fn == 'psych-acc': 
-            loss = AccPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
-        else:
-            loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
+            if args.loss_fn == 'cross-entropy':
+                loss = loss_fn(outputs, labels)
+            elif args.loss_fn == 'psych-acc': 
+                loss = AccPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
+            else:
+                loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
 
-        running_loss += loss.item()
+            running_loss += loss.item()
 
-        # labels_hat = torch.argmax(outputs, dim=1)  
-        # correct += torch.sum(labels.data == labels_hat)
+            # labels_hat = torch.argmax(outputs, dim=1)  
+            # correct += torch.sum(labels.data == labels_hat)
 
-        # this seemed to fix the accuracy calculation
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+            # this seemed to fix the accuracy calculation
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
-    train_loss = running_loss / len(train_loader)
-    accuracy = 100 * correct / total
+        train_loss = running_loss / len(train_loader)
+        accuracy = 100 * correct / total
 
-    print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
-    print(f'running loss: {train_loss:.4f}')
+        print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
+        print(f'running loss: {train_loss:.4f}')
 
-    if args.use_neptune: 
-        neptune.log_metric('train_loss', train_loss)
-        neptune.log_metric('accuracy', accuracy)
+        if args.use_neptune: 
+            neptune.log_metric('train_loss', train_loss)
+            neptune.log_metric('accuracy', accuracy)
 
-    accuracies.append(accuracy)
-    losses.append(train_loss)
+        accuracies.append(accuracy)
+        losses.append(train_loss)
 
-print(f'{time.time() - exp_time:.2f} seconds')
+    print(f'{time.time() - exp_time:.2f} seconds')
 
-# save model
-# /afs/crc.nd.edu/user/j/jdulay/psychophysics-loss
-path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod.pth'
-if args.loss_fn == 'psych-rt':
-    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod.pth'
-elif args.loss_fn == 'psych-acc':
-    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/acc-mod.pth'
-else:
-    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod.pth'
+    # save model
+    # /afs/crc.nd.edu/user/j/jdulay/psychophysics-loss
+    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod-{}.pth'.format(seed_idx)
+    if args.loss_fn == 'psych-rt':
+        path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod-{}.pth'.format(seed_idx)
+    elif args.loss_fn == 'psych-acc':
+        path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/acc-mod-{}.pth'.format(seed_idx)
+    else:
+        path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod-{}.pth'.format(seed_idx)
 
-    
-torch.save(model.state_dict(), path)
+        
+    torch.save(model.state_dict(), path)
 
-# plt, do metrics with
+    # plt, do metrics with
