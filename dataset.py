@@ -1,8 +1,10 @@
 from torch.utils.data import Dataset
+import os
 import pandas as pd
+import random
 from skimage import io
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from torchvision.utils import save_image
 
@@ -50,13 +52,16 @@ class OmniglotReactionTimeDataset(Dataset):
         # image2 = io.imread(im2name)
         image2 = Image.open(im2name)
         rt = self.raw_data.iloc[idx, 4]
-        acc = self.raw_data.iloc[idx, 5]
+        sigma = self.raw_data.iloc[idx, 5]
+        
+        # just add in the blur for now, parameterize it later, 
+        image1 = image1.filter(ImageFilter.GaussianBlur(radius = sigma))
 
         if self.transform:
             image1 = self.transform(image1)
             image2 = self.transform(image2)
 
         sample = {'label1': label1, 'label2': label2, 'image1': image1,
-                                            'image2': image2, 'rt': rt, 'acc': acc}
+                                            'image2': image2, 'rt': rt, 'acc': sigma}
 
         return sample
