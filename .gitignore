@@ -10,6 +10,10 @@
 
 # dataset files
 *.csv
+!small_dataset.csv
+
+# models
+*.pth
 
 # CRC logs
 train_*
@@ -18,5 +22,3 @@ optuna-tune*
 optuna_tune*
 train-*
 eval_ps*
-
-*.pth

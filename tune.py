@@ -33,7 +33,7 @@ parser.add_argument('--use_neptune', type=bool, default=False,
 args = parser.parse_args()
 
 if args.use_neptune:
-    neptune.init('dulayjm/psyphy-loss')
+    neptune.init('sandbox/tunings')
     neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn, 'optuna'])
 
 # configs
@@ -43,8 +43,6 @@ print('device is', device)
 model = resnet50(pretrained=True).to(device)
 model.fc = nn.Linear(2048, 100).to(device)
 
-# optim = torch.optim.Adam(model.parameters(), 0.001)
-
 if args.loss_fn == 'cross-entropy':
     loss_fn = nn.CrossEntropyLoss()
 
@@ -52,7 +50,6 @@ num_epochs = args.num_epochs
 
 batch_size = args.batch_size
 
-# here 
 def objective(trial):
     train_transform = transforms.Compose([
                     transforms.RandomCrop(32, padding=4),
@@ -126,10 +123,6 @@ def objective(trial):
 
             running_loss += loss.item()
 
-            # labels_hat = torch.argmax(outputs, dim=1)  
-            # correct += torch.sum(labels.data == labels_hat)
-
-            # this seemed to fix the accuracy calculation
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -154,7 +147,7 @@ def objective(trial):
 
     print(f'{time.time() - exp_time:.2f} seconds')
     return accuracy
-    # plt, do metrics with
+    # plt, do metrics with, etc ..
 
 
 if __name__ == '__main__':
@@ -162,7 +155,7 @@ if __name__ == '__main__':
     study = optuna.create_study(direction="maximize") # minimize loss_fn
     study.optimize(objective, n_trials=100, timeout=600)
 
-    # we aren't finetuning the model, 
+    # we aren't finetuning the entire model, 
     # just the loss functions, lr, optim
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])

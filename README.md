@@ -1,18 +1,23 @@
 # Psychophysics-loss
 
-This repository walks through integrating a simple psychophysics parameters gathered 
-from a 2AFC Amazon Turk Experiment. The full dataset will be released soon. For now, 
-utilize the `small_acc.csv` for quick computations.
+The paper associated with this code will be published 
+in the future. 
 
 ### Usage
 
-1. Install Depedencies. 
+1. Install Depedencies
 
 ```
 python3 venv -m env
 source env/bin/activate
 pip3 install -r requirements.txt
 ```
+
+2. Get files
+
+You will need `.csv` files and directories from these links in order to run the larger experiments:
+
+TODO: upload google drive links ...
 
 2. Run via scripts
 
@@ -21,13 +26,24 @@ best run of reaction time as a pyschophysical paramerter. `cross-entropy.sh` dea
 regular cross entropy loss as a control group, and `train_acc.sh` runs with accuracy as
 a parameter. 
 
-3. Run locally
+First, you made me to set your path like: 
+```
+echo $BASE_PATH
+```
+and format this directory and subdirectories before the working directory that you cloned for this repo. 
 
-If you are running locally, you may also execute this command, and change any of the CLI 
+Then, you can call any script like: 
+```
+bash scripts/train.sh
+```
+
+3. Run manually
+
+If you are running locally, you may also execute this command (or something similar), and change any of the CLI 
 arguments: 
 
 ```
-python "$BASE_PATH/main.py" --num_epochs=20  --dataset_file="small_acc.csv"
+python "$BASE_PATH/main.py" --num_epochs=20  --dataset_file="small_dataset.csv"
 ```
 
 4. Utilize Neptune

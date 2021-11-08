@@ -1,18 +1,17 @@
-import torch
 import numpy as np
+import torch
 
+# reaction time psychophysical loss
 def PsychCrossEntropyLoss(outputs, targets, psych):
     num_examples = targets.shape[0]
     batch_size = outputs.shape[0]
 
     # converting reaction time to penalty
-    # 30000 is close to the max penalty time seen in the data
+    # 10002 is close to the max penalty time seen in the data
     for idx in range(len(psych)):   
         psych[idx] = abs(10002 - psych[idx])
 
     # adding penalty to each of the output logits 
-    # but it's too severe and outweighs the rest of the loss
-    # scaling seems to somewhat work
     for i in range(len(outputs)):
         val = psych[i] / 300
         if np.isnan(val.cpu()):
@@ -23,9 +22,9 @@ def PsychCrossEntropyLoss(outputs, targets, psych):
     outputs = _log_softmax(outputs)
     outputs = outputs[range(batch_size), targets]
 
-    return - torch.sum(outputs)/num_examples
+    return - torch.sum(outputs) / num_examples
 
-
+# mean accuracy psychophysical loss
 def AccPsychCrossEntropyLoss(outputs, targets, psych):
     num_examples = targets.shape[0]
     batch_size = outputs.shape[0]
@@ -34,7 +33,6 @@ def AccPsychCrossEntropyLoss(outputs, targets, psych):
     for idx in range(len(psych)):   
         psych[idx] = abs(1 - psych[idx])
 
-    # for now, no need to scale ...
     for i in range(len(outputs)):
         outputs[i] += (psych[i])
 

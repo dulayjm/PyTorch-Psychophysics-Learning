@@ -1,9 +1,10 @@
+matplotlib
+neptune-client
+numpy
+optuna
+pandas
+Pillow
+scikit-image
+string_utils
 torch
 torchvision
-numpy
-matplotlib
-scikit-image
-pandas
-string_utils
-neptune-client
-optuna

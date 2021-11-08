@@ -22,7 +22,7 @@ parser.add_argument('--batch_size', type=int, default=64,
                     help='batch size')
 parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
-parser.add_argument('--learning_rate', type=float, default=0.01, 
+parser.add_argument('--learning_rate', type=float, default=0.001, 
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
@@ -33,32 +33,38 @@ parser.add_argument('--use_neptune', type=bool, default=False,
 
 args = parser.parse_args()
 
-# let's do this 5 times, changing the random seed each time
+# 5 iterations, changing the random seed each time
 for seed_idx in range(1, 6):
     random_seed = seed_idx ** 3
-
     torch.manual_seed(random_seed)
 
+    # neptune init
     if args.use_neptune:
-        neptune.init('dulayjm/psyphy-loss')
-        neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn, random_seed])
+        # choose within your local path setup
+        # eg. neptune_path = 'alice/psyphy-loss' ...
+        neptune_path = ''
+        if neptune_path: 
+            neptune.init(neptune_path)
+            neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), \
+                params={'lr': args.learning_rate}, tags=[args.loss_fn, random_seed])
 
     # configs
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('device is', device)
 
+    num_epochs = args.num_epochs
+    batch_size = args.batch_size
+
     model = resnet50(pretrained=True).to(device)
     model.fc = nn.Linear(2048, args.num_classes).to(device)
+    model.train()
 
-    optim = torch.optim.Adam(model.parameters(), 0.001)
+    optim = torch.optim.Adam(model.parameters(), args.learning_rate)
 
     if args.loss_fn == 'cross-entropy':
         loss_fn = nn.CrossEntropyLoss()
 
-    num_epochs = args.num_epochs
-
-    batch_size = args.batch_size
-
+    # data transforms and loader 
     train_transform = transforms.Compose([
                     transforms.RandomCrop(32, padding=4),
                     transforms.Grayscale(num_output_channels=3),
@@ -71,19 +77,15 @@ for seed_idx in range(1, 6):
     validation_split = .2
     shuffle_dataset = True
 
-
-
-
     dataset_size = len(dataset)
     indices = list(range(dataset_size))
     split = int(np.floor(validation_split * dataset_size))
 
-    if shuffle_dataset :
+    if shuffle_dataset:
         np.random.seed(random_seed)
         np.random.shuffle(indices)
     train_indices, val_indices = indices[split:], indices[:split]
 
-    # Creating PT data samplers and loaders:
     train_sampler = SubsetRandomSampler(train_indices)
     valid_sampler = SubsetRandomSampler(val_indices)
 
@@ -92,16 +94,9 @@ for seed_idx in range(1, 6):
     validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                                     sampler=valid_sampler)
 
-    # dataloader = torch.utils.data.DataLoader(
-    #         train_set,
-    #         batch_size=batch_size, shuffle=True,
-    #         num_workers=0, pin_memory=True)
-
-    model.train()
 
     accuracies = []
     losses = []
-
     exp_time = time.time()
 
     for epoch in range(num_epochs):
@@ -121,10 +116,11 @@ for seed_idx in range(1, 6):
             else: 
                 psych = sample['rt']
 
-            # concatenate the batched images for now
+            # concatenate the batched images
             inputs = torch.cat([image1, image2], dim=0).to(device)
             labels = torch.cat([label1, label2], dim=0).to(device)
 
+            # apply psychophysical annotations to correct images
             psych_tensor = torch.zeros(len(labels))
             j = 0 
             for i in range(len(psych_tensor)):
@@ -135,7 +131,6 @@ for seed_idx in range(1, 6):
                     psych_tensor[i] = psych_tensor[i-1]
             psych_tensor = psych_tensor.to(device)
 
-
             outputs = model(inputs).to(device)
 
             if args.loss_fn == 'cross-entropy':
@@ -145,16 +140,14 @@ for seed_idx in range(1, 6):
             else:
                 loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
+            # update weights and back propogate
             optim.zero_grad()
             loss.backward()
             optim.step()
 
             running_loss += loss.item()
 
-            # labels_hat = torch.argmax(outputs, dim=1)  
-            # correct += torch.sum(labels.data == labels_hat)
-
-            # this seemed to fix the accuracy calculation
+            # calculate accuracy per class
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -174,17 +167,9 @@ for seed_idx in range(1, 6):
 
     print(f'{time.time() - exp_time:.2f} seconds')
 
-    # save model
-    # /afs/crc.nd.edu/user/j/jdulay/psychophysics-loss
-    path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod-{}.pth'.format(seed_idx)
-    if args.loss_fn == 'psych-rt':
-        path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod-{}.pth'.format(seed_idx)
-    elif args.loss_fn == 'psych-acc':
-        path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/acc-mod-{}.pth'.format(seed_idx)
-    else:
-        path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod-{}.pth'.format(seed_idx)
-
-        
-    torch.save(model.state_dict(), path)
-
-    # plt, do metrics with
+    # TO SAVE MODEL: 
+    # model will save based upon your loss function
+    # set path here :
+    path = ''
+    if path: 
+        torch.save(model.state_dict(), path)

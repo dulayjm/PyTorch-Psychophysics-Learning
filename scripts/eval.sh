@@ -1,12 +1,11 @@
 #!/bin/bash
 
-#$ -N eval_psych_ce
+#$ -N eval_psych
 #$ -q gpu
-#S -M jdulay@nd.edu
 #S -m abe
 #$ -l gpu=4
 
 BASE_PATH="$HOME/psychophysics-loss"
-module load python
+# module load python
 
-python "$BASE_PATH/test.py"  --dataset_file="processed_out_acc.csv" --use_neptune=True
+python "$BASE_PATH/test.py"  --dataset_file="small_dataset.csv" --use_neptune=False

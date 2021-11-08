@@ -2,14 +2,13 @@
 
 #$ -N optuna_tune_crossentropy
 #$ -q gpu
-#S -M jdulay@nd.edu
 #S -m abe
 #$ -l gpu=4
 
 BASE_PATH="$HOME/psychophysics-loss"
-module load python
-pip3 install -r requirements.txt
+# module load python
+# pip3 install -r requirements.txt
 
-python "$BASE_PATH/tune.py" --dataset_file="processed_out_acc.csv" \
+python "$BASE_PATH/tune.py" --dataset_file="small_dataset.csv.csv" \
   --loss_fn="cross-entropy" \
   --use_neptune=True

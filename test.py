@@ -33,30 +33,40 @@ parser.add_argument('--use_neptune', type=bool, default=False,
 args = parser.parse_args()
 
 if args.use_neptune:
-    neptune.init('dulayjm/psyphy-loss')
-    neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn])
+    # choose within your local path setup
+    # eg. neptune_path = 'alice/psyphy-loss' ...
+    neptune_path = ''
+    if neptune_path:
+        neptune.init(neptune_path)
+        neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn])
+
+# seed for test replication
+random_seed = 5 ** 3
+torch.manual_seed(random_seed)
 
 # configs
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('device is', device)
 
+num_epochs = args.num_epochs
+batch_size = args.batch_size
+
 model = resnet50(pretrained=True).to(device)
 model.fc = nn.Linear(2048, args.num_classes).to(device)
 
-path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod.pth'
+# LOAD PATH
+# should be just in the project directory
+# you can change to whatever you prfer
+load_path = 'rt-mod.pth'
 
-model.load_state_dict(torch.load(path))
-
+model.load_state_dict(torch.load(load_path))
 
 optim = torch.optim.Adam(model.parameters(), 0.001)
 
 if args.loss_fn == 'cross-entropy':
     loss_fn = nn.CrossEntropyLoss()
 
-num_epochs = args.num_epochs
-
-batch_size = args.batch_size
-
+# transforms and data loader
 train_transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),
                 transforms.Grayscale(num_output_channels=3),
@@ -68,7 +78,6 @@ dataset = OmniglotReactionTimeDataset(args.dataset_file,
 
 validation_split = .2
 shuffle_dataset = True
-random_seed = 42
 
 dataset_size = len(dataset)
 indices = list(range(dataset_size))
@@ -79,11 +88,11 @@ if shuffle_dataset :
     np.random.shuffle(indices)
 train_indices, val_indices = indices[split:], indices[:split]
 
-# Creating PT data samplers and loaders:
 train_sampler = SubsetRandomSampler(train_indices)
 valid_sampler = SubsetRandomSampler(val_indices)
 
-train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
+# NOTE: not using train_loader at all 
+_ = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
                                            sampler=train_sampler)
 validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                                 sampler=valid_sampler)
@@ -95,7 +104,6 @@ losses = []
 
 exp_time = time.time()
 
-# running_loss = 0.0
 correct = 0.0
 total = 0.0
 
@@ -126,57 +134,20 @@ with torch.no_grad():
             else: 
                 psych_tensor[i] = psych_tensor[i-1]
         psych_tensor = psych_tensor.to(device)
-
-
         outputs = model(inputs).to(device)
 
-        # if args.loss_fn == 'cross-entropy':
-        #     loss = loss_fn(outputs, labels)
-        # elif args.loss_fn == 'psych-acc': 
-        #     loss = AccPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
-        # else:
-        #     loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
-
-        # optim.zero_grad()
-        # loss.backward()
-        # optim.step()
-
-        # running_loss += loss.item()
-
-        # labels_hat = torch.argmax(outputs, dim=1)  
-        # correct += torch.sum(labels.data == labels_hat)
-
-        # this seemed to fix the accuracy calculation
+        # we don't update weights at test time
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
 
-    # train_loss = running_loss / len(train_loader)
     accuracy = 100 * correct / total
 
     print(f'accuracy: {accuracy:.2f}%')
-    # print(f'running loss: {train_loss:.4f}')
 
     if args.use_neptune: 
-        # neptune.log_metric('test loss', train_loss)
         neptune.log_metric('test accuracy', accuracy)
 
     accuracies.append(accuracy)
-    # losses.append(train_loss)
 
     print(f'{time.time() - exp_time:.2f} seconds')
-
-# # save model
-# # /afs/crc.nd.edu/user/j/jdulay/psychophysics-loss
-# path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod.pth'
-# if args.loss_fn == 'psych-rt':
-#     path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/rt-mod.pth'
-# elif args.loss_fn == 'psych-acc':
-#     path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/acc-mod.pth'
-# else:
-#     path = '/afs/crc.nd.edu/user/j/jdulay/psychophysics-loss/ce-mod.pth'
-
-    
-# torch.save(model.state_dict(), path)
-
-# plt, do metrics with

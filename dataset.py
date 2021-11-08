@@ -23,11 +23,6 @@ class OmniglotReactionTimeDataset(Dataset):
 
     def __init__(self, data_file, transforms=None):
         self.raw_data = pd.read_csv(data_file)
-#         print('raw ', self.raw_data)
-#        for i in range(5):
-#            print('for testing purposes, the item is ', self.raw_data.iloc[0, i])
-#            print('the type of the item is', type(self.raw_data.iloc[0, i]))
-
         self.transform = transforms
 
     def __len__(self):
@@ -36,32 +31,24 @@ class OmniglotReactionTimeDataset(Dataset):
     def __getitem__(self, idx):
         label1 = int(self.raw_data.iloc[idx, 0])
         label2 = int(self.raw_data.iloc[idx, 1])
+
         im1name = self.raw_data.iloc[idx, 2]
-
-#        print('im1name', im1name)
-
         image1 = Image.open(im1name)
-        # image1 = torch.tensor(image1)
-        # image1 = io.imread(im1name)
-        # image1 = torch.tensor(image1)
-        # save_image(image1, 'sanity1.png')
-        # io.imsave('sanity.png', image1)
-        # well we can't open an image, because they are an array of images...
-        # you need a loop to open them up individually
         im2name = self.raw_data.iloc[idx, 3]
-        # image2 = io.imread(im2name)
         image2 = Image.open(im2name)
-        rt = self.raw_data.iloc[idx, 4]
-        sigma = self.raw_data.iloc[idx, 5]
         
-        # just add in the blur for now, parameterize it later, 
-        image1 = image1.filter(ImageFilter.GaussianBlur(radius = sigma))
+        rt = self.raw_data.iloc[idx, 4]
+        sigma_or_accuracy = self.raw_data.iloc[idx, 5]
+        
+        # if you wanted to, you could perturb one of the images. 
+        # our final experiments did not do this, though. only some of them 
+        # image1 = image1.filter(ImageFilter.GaussianBlur(radius = sigma_or_accuracy))
 
         if self.transform:
             image1 = self.transform(image1)
             image2 = self.transform(image2)
 
         sample = {'label1': label1, 'label2': label2, 'image1': image1,
-                                            'image2': image2, 'rt': rt, 'acc': sigma}
+                                            'image2': image2, 'rt': rt, 'acc': sigma_or_accuracy}
 
         return sample
