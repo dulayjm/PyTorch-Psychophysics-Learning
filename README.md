@@ -25,7 +25,7 @@ where the labels are the labels of the two respective images, images are torch t
 
 ## Usage
 
-### 1. Install Depedencies
+### 1. Install Dependencies
 
 ```
 python3 venv -m env
