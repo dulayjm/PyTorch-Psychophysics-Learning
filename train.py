@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 from torchvision.models import resnet50
 
 from dataset import OmniglotReactionTimeDataset
-from psychloss import PsychCrossEntropyLoss
+from psychloss import RtPsychCrossEntropyLoss
 from psychloss import AccPsychCrossEntropyLoss
 
 # args
@@ -74,12 +74,12 @@ for seed_idx in range(1, 6):
     dataset = OmniglotReactionTimeDataset(args.dataset_file, 
                 transforms=train_transform)
 
-    validation_split = .2
+    test_split = .2
     shuffle_dataset = True
 
     dataset_size = len(dataset)
     indices = list(range(dataset_size))
-    split = int(np.floor(validation_split * dataset_size))
+    split = int(np.floor(test_split * dataset_size))
 
     if shuffle_dataset:
         np.random.seed(random_seed)
@@ -91,7 +91,8 @@ for seed_idx in range(1, 6):
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, 
                                             sampler=train_sampler)
-    validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+    # test loader not utilzed in the train file 
+    _ = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                                     sampler=valid_sampler)
 
 
@@ -138,7 +139,7 @@ for seed_idx in range(1, 6):
             elif args.loss_fn == 'psych-acc': 
                 loss = AccPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
             else:
-                loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
+                loss = RtPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
             # update weights and back propogate
             optim.zero_grad()

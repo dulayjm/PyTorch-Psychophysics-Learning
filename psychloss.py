@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 # reaction time psychophysical loss
-def PsychCrossEntropyLoss(outputs, targets, psych):
+def RtPsychCrossEntropyLoss(outputs, targets, psych):
     num_examples = targets.shape[0]
     batch_size = outputs.shape[0]
 

@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torchvision.models import resnet50
 
 from dataset import OmniglotReactionTimeDataset
-from psychloss import PsychCrossEntropyLoss
+from psychloss import RtPsychCrossEntropyLoss
 from psychloss import AccPsychCrossEntropyLoss
 
 # args
@@ -115,7 +115,7 @@ def objective(trial):
             elif args.loss_fn == 'psych-acc': 
                 loss = AccPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
             else:
-                loss = PsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
+                loss = RtPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
             optim.zero_grad()
             loss.backward()
