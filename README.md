@@ -44,7 +44,7 @@ The following scripts perform different deep learning tasks. If working on a ser
 
 `train.sh` trains the neural network under the same random seeds as in the paper. It defaults to reaction time as the psychophysical parameter, but you can switch to accuracy or no parameter at all.
 
-`eval.sh` tests the saved model from training for quick evaluation of the network. Pre-trained models are also provided on the google drive. Load one into the repo directory and have fun. 
+`test.sh` tests pre-trained models for quick evaluation of the network. Pre-trained models are also provided on the google drive. Load one into the repo directory and have fun. 
 
 `tune.sh` utilizes the hyperparameter tuning used early on in the experiments. You can run this script and make adjustments according to the [optuna](https://optuna.org/) docs. The script now utilizes just the hyperparameter tuning, but you could use it to tune the model if you would like to. We decided not to focus on the simplicity of the effectiveness of psychophysical parameterization of the label space.  
 
@@ -67,7 +67,7 @@ with respect to arguments in `argparser`.)
 If you are running locally, you may also execute this command (or something similar), and change any of the CLI arguments: 
 
 ```
-python "$BASE_PATH/main.py" --num_epochs=20  --dataset_file="small_dataset.csv"
+python "$BASE_PATH/train.py" --num_epochs=20  --dataset_file="small_dataset.csv"
 ```
 
 ### 5. Utilize Neptune
