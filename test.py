@@ -25,7 +25,7 @@ parser.add_argument('--learning_rate', type=float, default=0.0001,
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
-parser.add_argument('--dataset_file', type=str, default='processed_out_acc.csv',
+parser.add_argument('--dataset_file', type=str, default='small_dataset.csv',
                     help='dataset file to use. out.csv is the full set')
 parser.add_argument('--use_neptune', type=bool, default=False,
                     help='log metrics via neptune')
@@ -39,6 +39,8 @@ if args.use_neptune:
     if neptune_path:
         neptune.init(neptune_path)
         neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), params={'lr': args.learning_rate}, tags=[args.loss_fn])
+    else: 
+        print('Please enter a correct neptune path aligned with an existing neptune project.')
 
 # seed for test replication
 random_seed = 5 ** 3

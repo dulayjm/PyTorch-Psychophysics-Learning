@@ -26,7 +26,7 @@ parser.add_argument('--learning_rate', type=float, default=0.001,
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
-parser.add_argument('--dataset_file', type=str, default='small_sigma.csv',
+parser.add_argument('--dataset_file', type=str, default='small_dataset.csv',
                     help='dataset file to use. out.csv is the full set')
 parser.add_argument('--use_neptune', type=bool, default=False,
                     help='log metrics via neptune')
@@ -47,6 +47,9 @@ for seed_idx in range(1, 6):
             neptune.init(neptune_path)
             neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), \
                 params={'lr': args.learning_rate}, tags=[args.loss_fn, random_seed])
+        else:
+            print('Please enter a correct neptune path aligned with an existing neptune project.')
+
 
     # configs
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
