@@ -1,14 +1,14 @@
 import argparse
 import time
 
-import neptune
 import numpy as np
 from numpy.random.mtrand import seed
 import torch
 import torch.nn as nn
 from torch.utils.data.sampler import SubsetRandomSampler
 import torchvision.transforms as transforms
-from torchvision.models import resnet50
+from torchvision.models import resnet50, vgg16
+from transformers import ViTForImageClassification
 
 from dataset import OmniglotReactionTimeDataset
 from psychloss import RtPsychCrossEntropyLoss
@@ -22,6 +22,8 @@ parser.add_argument('--batch_size', type=int, default=64,
                     help='batch size')
 parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
+parser.add_argument('--model_name', type=str, default='resnet',
+                    help='number of classes')
 parser.add_argument('--learning_rate', type=float, default=0.001, 
                     help='learning rate')
 parser.add_argument('--loss_fn', type=str, default='psych-rt',
@@ -34,22 +36,11 @@ parser.add_argument('--use_neptune', type=bool, default=False,
 args = parser.parse_args()
 
 # 5 iterations, changing the random seed each time
-for seed_idx in range(1, 6):
+for seed_idx in range(1, 2):
     random_seed = seed_idx ** 3
     torch.manual_seed(random_seed)
 
-    # neptune init
-    if args.use_neptune:
-        # choose within your local path setup
-        # eg. neptune_path = 'alice/psyphy-loss' ...
-        neptune_path = ''
-        if neptune_path: 
-            neptune.init(neptune_path)
-            neptune.create_experiment(name='sandbox-{}'.format(args.loss_fn), \
-                params={'lr': args.learning_rate}, tags=[args.loss_fn, random_seed])
-        else:
-            print('Please enter a correct neptune path aligned with an existing neptune project.')
-
+    
 
     # configs
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,9 +49,19 @@ for seed_idx in range(1, 6):
     num_epochs = args.num_epochs
     batch_size = args.batch_size
 
-    model = resnet50(pretrained=True).to(device)
-    model.fc = nn.Linear(2048, args.num_classes).to(device)
-    model.train()
+
+    if args.model_name=='resnet':
+        model = resnet50(pretrained=True).to(device)
+        model.fc = nn.Linear(2048, args.num_classes).to(device)
+        model.train()
+    elif args.model_name=='vgg':
+        model = vgg16(pretrained=True).to(device)
+        model.fc = nn.Linear(4096, args.num_classes).to(device)
+        model.train()
+    elif args.model_name == 'vit':
+        model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k', num_labels=100)
+        model.fc = nn.Linear(4096, args.num_classes).to(device)
+        model.train()
 
     optim = torch.optim.Adam(model.parameters(), args.learning_rate)
 
