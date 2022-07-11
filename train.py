@@ -9,10 +9,12 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import torchvision.transforms as transforms
 from torchvision.models import resnet50, vgg16
 from transformers import ViTForImageClassification
+import wandb
 
 from dataset import OmniglotReactionTimeDataset
 from psychloss import RtPsychCrossEntropyLoss
 from psychloss import AccPsychCrossEntropyLoss
+from model import LayerAdjustedGenericModel
 
 # args
 parser = argparse.ArgumentParser(description='Training Psych Loss.')
@@ -30,18 +32,25 @@ parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
 parser.add_argument('--dataset_file', type=str, default='small_dataset.csv',
                     help='dataset file to use. out.csv is the full set')
-parser.add_argument('--use_neptune', type=bool, default=False,
-                    help='log metrics via neptune')
+parser.add_argument('--log', type=bool, default=False,
+                    help='log metrics via wandb')
 
 args = parser.parse_args()
+
+if args.log:
+    wandb_cfg = vars(args)
+    wandb.init(
+            project = 'omniglot_train',
+            notes = 're-train',
+            config = wandb_cfg
+        )
+
 
 # 5 iterations, changing the random seed each time
 for seed_idx in range(1, 2):
     random_seed = seed_idx ** 3
     torch.manual_seed(random_seed)
-
     
-
     # configs
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('device is', device)
@@ -49,22 +58,12 @@ for seed_idx in range(1, 2):
     num_epochs = args.num_epochs
     batch_size = args.batch_size
 
-
-    if args.model_name=='resnet':
-        model = resnet50(pretrained=True).to(device)
-        model.fc = nn.Linear(2048, args.num_classes).to(device)
-        model.train()
-    elif args.model_name=='vgg':
-        model = vgg16(pretrained=True).to(device)
-        model.fc = nn.Linear(4096, args.num_classes).to(device)
-        model.train()
-    elif args.model_name == 'vit':
-        model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k', num_labels=100)
-        model.fc = nn.Linear(4096, args.num_classes).to(device)
-        model.train()
-
+    model = LayerAdjustedGenericModel(args.model_name, args.num_classes, device)
+    print(model)
     optim = torch.optim.Adam(model.parameters(), args.learning_rate)
-
+    
+    # wait, do we need to define a custom model forward function here?
+    # i think we might have to ...
     if args.loss_fn == 'cross-entropy':
         loss_fn = nn.CrossEntropyLoss()
 
@@ -98,7 +97,6 @@ for seed_idx in range(1, 2):
     # test loader not utilzed in the train file 
     _ = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                                     sampler=valid_sampler)
-
 
     accuracies = []
     losses = []
@@ -146,11 +144,14 @@ for seed_idx in range(1, 2):
                 loss = RtPsychCrossEntropyLoss(outputs, labels, psych_tensor).to(device)
 
             # update weights and back propogate
-            optim.zero_grad()
+            # removed zero_grad? 
             loss.backward()
             optim.step()
 
             running_loss += loss.item()
+            if args.log: 
+                if idx % 1000 == 0: 
+                    wandb.log({'loss': running_loss})
 
             # calculate accuracy per class
             _, predicted = torch.max(outputs.data, 1)
@@ -163,10 +164,6 @@ for seed_idx in range(1, 2):
         print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
         print(f'running loss: {train_loss:.4f}')
 
-        if args.use_neptune: 
-            neptune.log_metric('train_loss', train_loss)
-            neptune.log_metric('accuracy', accuracy)
-
         accuracies.append(accuracy)
         losses.append(train_loss)
 
@@ -175,6 +172,6 @@ for seed_idx in range(1, 2):
     # TO SAVE MODEL: 
     # model will save based upon your loss function
     # set path here :
-    path = ''
+    path = './saved_models/resnet.pt'
     if path: 
         torch.save(model.state_dict(), path)
