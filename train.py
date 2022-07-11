@@ -41,7 +41,7 @@ if args.log:
     wandb_cfg = vars(args)
     wandb.init(
             project = 'omniglot_train',
-            notes = 're-train',
+            notes = 're-train-no-fc',
             config = wandb_cfg
         )
 
@@ -69,13 +69,14 @@ for seed_idx in range(1, 2):
 
     # data transforms and loader 
     train_transform = transforms.Compose([
-                    transforms.RandomCrop(32, padding=4),
+                    # transforms.RandomCrop(32, padding=4),
                     transforms.Grayscale(num_output_channels=3),
-                    transforms.RandomHorizontalFlip(),
+                    # transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
                     ])
     dataset = OmniglotReactionTimeDataset(args.dataset_file, 
                 transforms=train_transform)
+
 
     test_split = .2
     shuffle_dataset = True
@@ -98,6 +99,7 @@ for seed_idx in range(1, 2):
     _ = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
                                                     sampler=valid_sampler)
 
+    
     accuracies = []
     losses = []
     exp_time = time.time()
@@ -145,13 +147,11 @@ for seed_idx in range(1, 2):
 
             # update weights and back propogate
             # removed zero_grad? 
+            optim.zero_grad()
             loss.backward()
             optim.step()
 
             running_loss += loss.item()
-            if args.log: 
-                if idx % 1000 == 0: 
-                    wandb.log({'loss': running_loss})
 
             # calculate accuracy per class
             _, predicted = torch.max(outputs.data, 1)
@@ -160,6 +160,10 @@ for seed_idx in range(1, 2):
 
         train_loss = running_loss / len(train_loader)
         accuracy = 100 * correct / total
+
+        if args.log: 
+            wandb.log({'loss': train_loss})
+            wandb.log({'acc': accuracy})
 
         print(f'epoch {epoch} accuracy: {accuracy:.2f}%')
         print(f'running loss: {train_loss:.4f}')
