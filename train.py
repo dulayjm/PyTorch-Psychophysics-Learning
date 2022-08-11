@@ -11,6 +11,8 @@ from torchvision.models import resnet50, vgg16
 from transformers import ViTForImageClassification
 import wandb
 
+from transformers import ViTFeatureExtractor
+
 from dataset import OmniglotReactionTimeDataset
 from psychloss import RtPsychCrossEntropyLoss
 from psychloss import AccPsychCrossEntropyLoss
@@ -20,7 +22,7 @@ from model import LayerAdjustedGenericModel
 parser = argparse.ArgumentParser(description='Training Psych Loss.')
 parser.add_argument('--num_epochs', type=int, default=20,
                     help='number of epochs to use')
-parser.add_argument('--batch_size', type=int, default=64,
+parser.add_argument('--batch_size', type=int, default=16,
                     help='batch size')
 parser.add_argument('--num_classes', type=int, default=100,
                     help='number of classes')
@@ -32,19 +34,19 @@ parser.add_argument('--loss_fn', type=str, default='psych-rt',
                     help='loss function to use. select: cross-entropy, psych-rt, psych-acc')                 
 parser.add_argument('--dataset_file', type=str, default='small_dataset.csv',
                     help='dataset file to use. out.csv is the full set')
-parser.add_argument('--log', type=bool, default=False,
+
+parser.add_argument('--log', type=int, default=0,
                     help='log metrics via wandb')
 
 args = parser.parse_args()
 
-if args.log:
+if args.log == 1:
     wandb_cfg = vars(args)
     wandb.init(
             project = 'omniglot_train',
-            notes = 're-train-no-fc',
+            notes = 'vit',
             config = wandb_cfg
         )
-
 
 # 5 iterations, changing the random seed each time
 for seed_idx in range(1, 2):
@@ -67,15 +69,47 @@ for seed_idx in range(1, 2):
     if args.loss_fn == 'cross-entropy':
         loss_fn = nn.CrossEntropyLoss()
 
-    # data transforms and loader 
-    train_transform = transforms.Compose([
-                    # transforms.RandomCrop(32, padding=4),
+    if args.model_name == 'vit':
+        feature_extractor = ViTFeatureExtractor.from_pretrained(
+                "google/vit-base-patch16-224-in21k",
+                do_resize=False, 
+                do_normalize=False,
+                #size=224
+            )
+        normalize = transforms.Normalize(mean=feature_extractor.image_mean, std=feature_extractor.image_std)
+        print('feature sizae', feature_extractor.size)
+        # i think you might need to forward them throughthe feature extractor
+        # too
+        train_transform = transforms.Compose(
+                [
                     transforms.Grayscale(num_output_channels=3),
-                    # transforms.RandomHorizontalFlip(),
+                    transforms.Resize(feature_extractor.size),
+                    #transforms.RandomHorizontalFlip(),
                     transforms.ToTensor(),
-                    ])
+                    normalize,
+                ]
+            )
+
+        val_transform = transforms.Compose(
+                [
+                    transforms.Grayscale(num_output_channels=3),
+                    transforms.Resize(feature_extractor.size),
+                    transforms.CenterCrop(feature_extractor.size),
+                    transforms.ToTensor(),
+                    normalize,
+                ]
+            )
+    # data transforms and loader 
+    else:
+        train_transform = transforms.Compose([
+                        # transforms.RandomCrop(32, padding=4),
+                        transforms.Grayscale(num_output_channels=3),
+                        # transforms.RandomHorizontalFlip(),
+                        transforms.ToTensor(),
+                        ])
+
     dataset = OmniglotReactionTimeDataset(args.dataset_file, 
-                transforms=train_transform)
+                    transforms=train_transform)
 
 
     test_split = .2
@@ -113,6 +147,11 @@ for seed_idx in range(1, 2):
             image1 = sample['image1']
             image2 = sample['image2']
 
+            print('in train, inputs shape is,', image1.shape)
+            print('image0 shape', image1[0].shape)
+            print('image1 dype', image1[0].dtype)
+            # so they are the right shape
+
             label1 = sample['label1']
             label2 = sample['label2']
 
@@ -136,7 +175,15 @@ for seed_idx in range(1, 2):
                     psych_tensor[i] = psych_tensor[i-1]
             psych_tensor = psych_tensor.to(device)
 
-            outputs = model(inputs).to(device)
+            #if args.model_name == 'vit':
+            #    inputs = feature_extractor(image1, return_tensors="pt")
+
+            
+
+            outputs = model(inputs)
+
+            outputs = outputs[0]
+            outputs = outputs.to(device)
 
             if args.loss_fn == 'cross-entropy':
                 loss = loss_fn(outputs, labels)
@@ -161,7 +208,7 @@ for seed_idx in range(1, 2):
         train_loss = running_loss / len(train_loader)
         accuracy = 100 * correct / total
 
-        if args.log: 
+        if args.log == 1: 
             wandb.log({'loss': train_loss})
             wandb.log({'acc': accuracy})
 

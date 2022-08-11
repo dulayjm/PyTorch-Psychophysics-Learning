@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 # reaction time psychophysical loss
 def RtPsychCrossEntropyLoss(outputs, targets, psych):
@@ -19,7 +20,14 @@ def RtPsychCrossEntropyLoss(outputs, targets, psych):
             
         outputs[i] += val 
 
-    outputs = _log_softmax(outputs)
+
+
+    if torch.isnan(outputs).any(): 
+        print('nan outputs')
+        1/0
+
+    # outputs = _log_softmax(outputs)
+    outputs = F.log_softmax(outputs, dim=1)   # compute the log of softmax values
     outputs = outputs[range(batch_size), targets]
 
     return - torch.sum(outputs) / num_examples
@@ -41,11 +49,11 @@ def AccPsychCrossEntropyLoss(outputs, targets, psych):
 
     return - torch.sum(outputs)/num_examples
 
-def _softmax(x):
-    exp_x = torch.exp(x)
-    sum_x = torch.sum(exp_x, dim=1, keepdim=True)
+#def _softmax(x):
+#    exp_x = torch.exp(x)
+#    sum_x = torch.sum(exp_x, dim=1, keepdim=True)
 
-    return exp_x/sum_x
+#    return exp_x/sum_x
 
-def _log_softmax(x):
-    return torch.log(_softmax(x))
+#def _log_softmax(x):
+#j    return torch.log(_softmax(x))
